@@ -20,8 +20,8 @@ pip install -e .
 
 ## Quick Start
 
-```pypywikitree
-from wikitree_api_client import WikiTreeClient
+```python
+from pywikitree import WikiTreeClient
 
 # Create client with your app ID (recommended for all requests)
 client = WikiTreeClient(app_id="YourAppName")
@@ -29,6 +29,14 @@ client = WikiTreeClient(app_id="YourAppName")
 # Get a public profile
 profile = client.get_profile("Clemens-1", fields=["Id", "Name", "BirthDate"])
 print(profile[0]["profile"])
+
+## Examples
+
+Check the [examples/](examples/) directory for full scripts:
+
+- [ancestor_tree.py](examples/ancestor_tree.py): Fetches ancestors and prints a text-based tree.
+- [bio_searcher.py](examples/bio_searcher.py): Searches for people and scans biographies for keywords.
+- [watchlist_explorer.py](examples/watchlist_explorer.py): Demonstrates authentication and watchlist management.
 
 # Search for people
 results = client.search_person(FirstName="Samuel", LastName="Clemens")
@@ -92,8 +100,7 @@ Then create the client without parameters:
 from pywikitree import WikiTreeClient
 
 # Will automatically use environment variables
-client = WikiTreeClient(    raise_on_api_status=True    # Raise exception on API errors
-)
+client = WikiTreeClient()
 ```
 
 The API uses an authentication flow that ultimately relies on cookies for the `api.wikitree.com` domain.

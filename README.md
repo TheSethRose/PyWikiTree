@@ -6,6 +6,7 @@ A Python client for the [WikiTree API](https://github.com/wikitree/wikitree-api)
 
 - Complete coverage of all documented WikiTree API endpoints
 - Built-in authentication support (`clientLogin` flow)
+- **GEDCOM 5.5.1 Export** for local backups
 - Automatic retry/backoff for rate limiting (HTTP 429)
 - Session-based cookie management
 - Type hints and enum support for parameters
@@ -37,6 +38,28 @@ Check the [examples/](examples/) directory for full scripts:
 - [ancestor_tree.py](examples/ancestor_tree.py): Fetches ancestors and prints a text-based tree.
 - [bio_searcher.py](examples/bio_searcher.py): Searches for people and scans biographies for keywords.
 - [watchlist_explorer.py](examples/watchlist_explorer.py): Demonstrates authentication and watchlist management.
+- [backup_to_gedcom.py](examples/backup_to_gedcom.py): Backs up a family tree to a standard GEDCOM file.
+
+## Local Backups (GEDCOM)
+
+You can easily back up your WikiTree data to a standard GEDCOM 5.5.1 file for use in other genealogy software.
+
+```python
+from pywikitree import WikiTreeClient, GedcomExporter
+
+client = WikiTreeClient(app_id="MyBackupTool")
+
+# 1. Fetch the tree data (e.g., 5 generations of ancestors)
+people = client.get_tree("Clemens-1", depth=5)
+
+# 2. Export to GEDCOM
+exporter = GedcomExporter()
+gedcom_content = exporter.export(people)
+
+# 3. Save to file
+with open("my_tree.ged", "w", encoding="utf-8") as f:
+    f.write(gedcom_content)
+```
 
 # Search for people
 results = client.search_person(FirstName="Samuel", LastName="Clemens")

@@ -456,3 +456,73 @@ class WikiTreeClient:
         if app_id:
             params["appId"] = app_id
         return self.request("getConnections", **params)
+
+    def get_tree(
+        self,
+        key: str | int,
+        *,
+        depth: int = 5,
+        fields: str | Sequence[str] | None = "*",
+    ) -> list[dict[str, Any]]:
+        """Fetch a family tree starting from a root profile.
+        
+        This is a convenience method that uses getAncestors to gather 
+        a list of unique person objects.
+        """
+        response = self.get_ancestors(key, depth=depth, fields=fields)
+        if not response or not isinstance(response, list):
+            return []
+            
+        # The API returns a list with one item containing the 'ancestors' list
+        data = response[0]
+        return data.get("ancestors", [])
+
+    def get_tree(
+        self,
+        root_key: str | int,
+        *,
+        ancestor_depth: int = 5,
+        include_relatives: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Fetch a tree of people starting from a root profile.
+
+        This is a convenience method that combines getAncestors and getRelatives
+        to build a dataset suitable for GEDCOM export.
+        """
+        # 1. Get ancestors
+        ancestor_resp = self.get_ancestors(root_key, depth=ancestor_depth)
+        if not ancestor_resp or not isinstance(ancestor_resp, list):
+            return []
+
+        people_dict: dict[str, dict[str, Any]] = {}
+        
+        # The API returns a list with one item containing the 'ancestors' list
+        data = ancestor_resp[0]
+        ancestors = data.get("ancestors", [])
+        
+        for p in ancestors:
+            p_id = str(p.get("Id"))
+            if p_id:
+                people_dict[p_id] = p
+
+        if include_relatives and people_dict:
+            # 2. Get relatives for all found ancestors to fill in spouses/siblings
+            # We do this in batches to be polite to the API
+            ids = list(people_dict.keys())
+            batch_size = 20
+            for i in range(0, len(ids), batch_size):
+                batch = ids[i : i + batch_size]
+                rel_resp = self.get_relatives(batch, get_spouses=True, get_children=True)
+                
+                if not rel_resp or not isinstance(rel_resp, list):
+                    continue
+                    
+                for item in rel_resp:
+                    # Each item is a person with a 'relatives' list
+                    rels = item.get("relatives", [])
+                    for r in rels:
+                        r_id = str(r.get("Id"))
+                        if r_id and r_id not in people_dict:
+                            people_dict[r_id] = r
+
+        return list(people_dict.values())

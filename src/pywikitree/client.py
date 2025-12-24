@@ -385,6 +385,106 @@ class WikiTreeClient:
             bioFormat=bio_format,
         )
 
+    def get_entire_watchlist(
+        self,
+        *,
+        fields: str | Sequence[str] | None = "*",
+        bio_format: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch every profile on the user's watchlist by handling pagination.
+        
+        This is the most efficient way to 'pull my entire tree' if you are the 
+        primary researcher for your family on WikiTree.
+        """
+        all_items = []
+        offset = 0
+        limit = 100
+        
+        while True:
+            resp = self.get_watchlist(
+                limit=limit, 
+                offset=offset, 
+                fields=fields, 
+                bio_format=bio_format,
+                get_space=False # Usually people want just the family tree
+            )
+            
+            if not resp or not isinstance(resp, list) or not resp[0].get("watchlist"):
+                break
+                
+            items = resp[0]["watchlist"]
+            all_items.extend(items)
+            
+            if len(items) < limit:
+                break
+                
+            offset += limit
+            
+        return all_items
+
+    def crawl_tree(
+        self,
+        root_key: str | int,
+        *,
+        max_people: int = 1000,
+        ancestor_depth: int = 10,
+        descendant_depth: int = 2,
+        fields: str | Sequence[str] | None = "*",
+    ) -> list[dict[str, Any]]:
+        """Recursively crawl the tree to find as many relatives as possible.
+        
+        Unlike get_tree, this can be used to perform deeper crawls by iteratively
+        using found ancestors/descendants as new starting points.
+        
+        Args:
+            root_key: Starting WikiTree ID.
+            max_people: Safety limit to prevent excessive API usage.
+            ancestor_depth: Depth per API call (max 10).
+            descendant_depth: Depth per API call (max 10).
+            fields: Fields to fetch.
+        """
+        people_dict: dict[str, dict[str, Any]] = {}
+        queue = [str(root_key)]
+        visited_roots = set()
+
+        def add_people(people_list: list[dict[str, Any]]):
+            for p in people_list:
+                p_id = str(p.get("Id") or p.get("id") or "")
+                if p_id and p_id not in people_dict:
+                    people_dict[p_id] = p
+
+        while queue and len(people_dict) < max_people:
+            current_key = queue.pop(0)
+            if current_key in visited_roots:
+                continue
+            visited_roots.add(current_key)
+
+            # 1. Get ancestors
+            anc_resp = self.get_ancestors(current_key, depth=ancestor_depth, fields=fields)
+            if anc_resp and isinstance(anc_resp, list) and len(anc_resp) > 0:
+                ancestors = anc_resp[0].get("ancestors", [])
+                add_people(ancestors)
+                # Add furthest ancestors to queue for deeper crawling
+                for p in ancestors:
+                    # If they have parents but we haven't visited them, they are candidates
+                    if (p.get("Father") or p.get("Mother")) and len(people_dict) < max_people:
+                        p_id = str(p.get("Id"))
+                        if p_id not in visited_roots:
+                            queue.append(p_id)
+
+            # 2. Get descendants
+            des_resp = self.get_descendants(current_key, depth=descendant_depth, fields=fields)
+            if des_resp and isinstance(des_resp, list) and len(des_resp) > 0:
+                descendants = des_resp[0].get("descendants", [])
+                add_people(descendants)
+
+            # 3. Get relatives for everyone found so far (in batches)
+            # This is handled by the fact that we add them to people_dict 
+            # and could potentially add them to the queue if we wanted a full graph crawl.
+            # For now, BFS on ancestors is the most common 'tree' expansion.
+
+        return list(people_dict.values())
+
     def get_bio(
         self,
         key: str | int,

@@ -32,32 +32,21 @@ def main():
         print(f"Authenticating as {email}...")
         client.authenticate(email=email, password=password)
         print("Authentication successful.\n")
+        
+        # Option A: Fetch the entire watchlist (Best for "My Entire Tree")
+        print("Fetching your entire watchlist...")
+        people = client.get_entire_watchlist()
     else:
-        print("No credentials found in .env. Proceeding with public data only.\n")
-
-    # Target profile (e.g., Clemens-1 for Mark Twain)
-    # You can change this to your own WikiTree ID
-    root_id = "Clemens-1"
-    ancestor_depth = 5
-    descendant_depth = 1  # Include children/grandchildren
-    
-    print(f"Fetching tree for {root_id}...")
-    print(f"- Ancestors: {ancestor_depth} generations")
-    print(f"- Descendants: {descendant_depth} generations")
-    print(f"- Including relatives (spouses/siblings) for everyone found")
+        print("No credentials found in .env. Proceeding with public crawl.\n")
+        
+        # Option B: Deep crawl from a root ID
+        root_id = "Clemens-1"
+        print(f"Performing deep crawl starting from {root_id}...")
+        people = client.crawl_tree(root_id, max_people=500)
     
     try:
-        # 1. Fetch the tree
-        # get_tree now supports ancestor_depth, descendant_depth, and include_relatives
-        people = client.get_tree(
-            root_id, 
-            ancestor_depth=ancestor_depth, 
-            descendant_depth=descendant_depth,
-            include_relatives=True
-        )
-        
         if not people:
-            print("No people found in the tree.")
+            print("No people found.")
             return
             
         print(f"Found {len(people)} individuals. Generating GEDCOM...")

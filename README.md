@@ -42,22 +42,34 @@ Check the [examples/](examples/) directory for full scripts:
 
 ## Local Backups (GEDCOM)
 
-You can easily back up your WikiTree data to a standard GEDCOM 5.5.1 file for use in other genealogy software.
+You can easily back up your WikiTree data to a standard GEDCOM 5.5.1 file.
+
+### Option 1: Your Entire Watchlist (Recommended)
+If you are the primary researcher for your family, the most complete way to get "your tree" is to fetch your entire watchlist.
 
 ```python
-from pywikitree import WikiTreeClient, GedcomExporter
+client.authenticate(email="...", password="...")
+people = client.get_entire_watchlist()
+```
 
-client = WikiTreeClient(app_id="MyBackupTool")
+### Option 2: Deep Tree Crawl
+If you want to pull a tree starting from a specific ancestor (even if they aren't on your watchlist), use `crawl_tree`. This method recursively fetches ancestors and descendants.
 
-# 1. Fetch the tree data (e.g., 5 generations of ancestors)
-people = client.get_tree("Clemens-1", depth=5)
+```python
+# Crawl up to 1000 people starting from a specific ID
+people = client.crawl_tree("Clemens-1", max_people=1000)
+```
 
-# 2. Export to GEDCOM
-exporter = GedcomExporter()
-gedcom_content = exporter.export(people)
+### Exporting to GEDCOM
+Once you have your list of people, use the `GedcomExporter`:
 
-# 3. Save to file
-with open("my_tree.ged", "w", encoding="utf-8") as f:
+```python
+from pywikitree import GedcomExporter
+
+exporter = GedcomExporter(people)
+gedcom_content = exporter.export()
+
+with open("backup.ged", "w", encoding="utf-8") as f:
     f.write(gedcom_content)
 ```
 

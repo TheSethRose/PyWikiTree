@@ -18,6 +18,10 @@ lib64/
 parts/
 sdist/
 var/
+
+# Personal data / Backups
+*.ged
+.env
 wheels/
 share/python-wheels/
 *.egg-info/

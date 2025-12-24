@@ -459,70 +459,83 @@ class WikiTreeClient:
 
     def get_tree(
         self,
-        key: str | int,
-        *,
-        depth: int = 5,
-        fields: str | Sequence[str] | None = "*",
-    ) -> list[dict[str, Any]]:
-        """Fetch a family tree starting from a root profile.
-        
-        This is a convenience method that uses getAncestors to gather 
-        a list of unique person objects.
-        """
-        response = self.get_ancestors(key, depth=depth, fields=fields)
-        if not response or not isinstance(response, list):
-            return []
-            
-        # The API returns a list with one item containing the 'ancestors' list
-        data = response[0]
-        return data.get("ancestors", [])
-
-    def get_tree(
-        self,
         root_key: str | int,
         *,
         ancestor_depth: int = 5,
+        descendant_depth: int = 0,
         include_relatives: bool = True,
+        fields: str | Sequence[str] | None = "*",
     ) -> list[dict[str, Any]]:
-        """Fetch a tree of people starting from a root profile.
+        """Fetch a comprehensive tree of people starting from a root profile.
 
-        This is a convenience method that combines getAncestors and getRelatives
-        to build a dataset suitable for GEDCOM export.
+        This method combines getAncestors, getDescendants, and getRelatives
+        to build a rich dataset suitable for GEDCOM export or deep analysis.
+        
+        Args:
+            root_key: The WikiTree ID or User ID to start from.
+            ancestor_depth: How many generations of ancestors to fetch.
+            descendant_depth: How many generations of descendants to fetch.
+            include_relatives: If True, fetches immediate relatives (spouses, siblings) 
+                for everyone found in the ancestor/descendant crawl.
+            fields: Fields to fetch for each profile.
         """
-        # 1. Get ancestors
-        ancestor_resp = self.get_ancestors(root_key, depth=ancestor_depth)
-        if not ancestor_resp or not isinstance(ancestor_resp, list):
-            return []
-
         people_dict: dict[str, dict[str, Any]] = {}
-        
-        # The API returns a list with one item containing the 'ancestors' list
-        data = ancestor_resp[0]
-        ancestors = data.get("ancestors", [])
-        
-        for p in ancestors:
-            p_id = str(p.get("Id"))
-            if p_id:
-                people_dict[p_id] = p
 
+        def add_people(people_list: list[dict[str, Any]]):
+            for p in people_list:
+                p_id = str(p.get("Id") or p.get("id") or "")
+                if p_id and p_id not in people_dict:
+                    people_dict[p_id] = p
+
+        # 1. Get ancestors
+        if ancestor_depth > 0:
+            anc_resp = self.get_ancestors(root_key, depth=ancestor_depth, fields=fields)
+            if anc_resp and isinstance(anc_resp, list) and len(anc_resp) > 0:
+                add_people(anc_resp[0].get("ancestors", []))
+
+        # 2. Get descendants
+        if descendant_depth > 0:
+            des_resp = self.get_descendants(root_key, depth=descendant_depth, fields=fields)
+            if des_resp and isinstance(des_resp, list) and len(des_resp) > 0:
+                add_people(des_resp[0].get("descendants", []))
+        
+        # If we didn't get anything yet, at least get the root person
+        if not people_dict:
+            root_resp = self.get_profile(root_key, fields=fields)
+            if root_resp and isinstance(root_resp, list) and len(root_resp) > 0:
+                p = root_resp[0].get("profile")
+                if p:
+                    add_people([p])
+
+        # 3. Get relatives to "thicken" the tree
         if include_relatives and people_dict:
-            # 2. Get relatives for all found ancestors to fill in spouses/siblings
-            # We do this in batches to be polite to the API
             ids = list(people_dict.keys())
-            batch_size = 20
+            batch_size = 20 # Conservative batch size
             for i in range(0, len(ids), batch_size):
                 batch = ids[i : i + batch_size]
-                rel_resp = self.get_relatives(batch, get_spouses=True, get_children=True)
+                rel_resp = self.get_relatives(
+                    batch, 
+                    get_parents=True, 
+                    get_children=True, 
+                    get_siblings=True, 
+                    get_spouses=True,
+                    fields=fields
+                )
                 
                 if not rel_resp or not isinstance(rel_resp, list):
                     continue
                     
                 for item in rel_resp:
-                    # Each item is a person with a 'relatives' list
-                    rels = item.get("relatives", [])
-                    for r in rels:
-                        r_id = str(r.get("Id"))
-                        if r_id and r_id not in people_dict:
-                            people_dict[r_id] = r
+                    # Extract person if not already there
+                    if "person" in item:
+                        add_people([item["person"]])
+                    
+                    # Extract relatives from various categories
+                    for cat in ["Parents", "Children", "Siblings", "Spouses"]:
+                        rel_data = item.get(cat)
+                        if isinstance(rel_data, dict):
+                            add_people(list(rel_data.values()))
+                        elif isinstance(rel_data, list):
+                            add_people(rel_data)
 
         return list(people_dict.values())

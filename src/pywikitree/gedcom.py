@@ -49,23 +49,62 @@ class GedcomExporter:
             return date_str
 
     def _generate_families(self) -> None:
-        """Group people into families based on Father/Mother IDs."""
+        """Group people into families based on Father/Mother IDs and Spouses."""
+        # 1. Families from parent links
         for person_id, person in self.people.items():
             father_id = str(person.get("Father", "0"))
             mother_id = str(person.get("Mother", "0"))
             
-            if father_id == "0" and mother_id == "0":
-                continue
+            if father_id != "0" or mother_id != "0":
+                # Normalize key to ensure consistency
+                h_id = father_id if father_id != "0" else "0"
+                w_id = mother_id if mother_id != "0" else "0"
+                fam_key = f"F_{h_id}_{w_id}"
                 
-            # Create a unique key for this parental pair
-            fam_key = f"F_{father_id}_{mother_id}"
-            if fam_key not in self.families:
-                self.families[fam_key] = {
-                    "HUSB": father_id if father_id != "0" else None,
-                    "WIFE": mother_id if mother_id != "0" else None,
-                    "CHIL": []
-                }
-            self.families[fam_key]["CHIL"].append(person_id)
+                if fam_key not in self.families:
+                    self.families[fam_key] = {
+                        "HUSB": father_id if father_id != "0" else None,
+                        "WIFE": mother_id if mother_id != "0" else None,
+                        "CHIL": []
+                    }
+                if person_id not in self.families[fam_key]["CHIL"]:
+                    self.families[fam_key]["CHIL"].append(person_id)
+
+        # 2. Families from spouse links (to catch couples without children in the dataset)
+        for person_id, person in self.people.items():
+            spouses = person.get("Spouses")
+            if not spouses:
+                continue
+            
+            spouse_ids = []
+            if isinstance(spouses, dict):
+                spouse_ids = [str(sid) for sid in spouses.keys()]
+            elif isinstance(spouses, list):
+                spouse_ids = [str(s.get("Id")) for s in spouses if s.get("Id")]
+
+            for s_id in spouse_ids:
+                if s_id not in self.people:
+                    continue
+                
+                # Determine husband/wife roles for the family record
+                p_gender = person.get("Gender", "")
+                s_gender = self.people[s_id].get("Gender", "")
+                
+                if p_gender == "Male" or s_gender == "Female":
+                    husb, wife = person_id, s_id
+                elif p_gender == "Female" or s_gender == "Male":
+                    husb, wife = s_id, person_id
+                else:
+                    # Fallback to ID ordering for consistency
+                    husb, wife = (person_id, s_id) if person_id < s_id else (s_id, person_id)
+
+                fam_key = f"F_{husb}_{wife}"
+                if fam_key not in self.families:
+                    self.families[fam_key] = {
+                        "HUSB": husb,
+                        "WIFE": wife,
+                        "CHIL": []
+                    }
 
     def export(self) -> str:
         """Generate the full GEDCOM string."""

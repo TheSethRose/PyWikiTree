@@ -59,6 +59,11 @@ def is_success_status(value: Any) -> bool:
         return True
     if value == "":
         return True
+    
+    # Some endpoints return "Ok" or "Success" as a string status
+    if isinstance(value, str) and value.lower() in {"ok", "success"}:
+        return True
+        
     return False
 
 

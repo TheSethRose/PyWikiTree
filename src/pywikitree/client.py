@@ -105,6 +105,10 @@ class WikiTreeClient:
     def _post(self, data: Mapping[str, Any], *, allow_redirects: bool = True) -> Any:
         retry_statuses = {429, 502, 503, 504}
 
+        # Ensure appId is included if available
+        if self._app_id and "appId" not in data:
+            data = {**data, "appId": self._app_id}
+
         for attempt in range(self._max_retries + 1):
             try:
                 resp = self._session.post(
@@ -169,6 +173,8 @@ class WikiTreeClient:
             "wpEmail": email,
             "wpPassword": password,
         }
+        if self._app_id:
+            step1["appId"] = self._app_id
 
         raw = self._session.post(
             self._base_url,
@@ -230,10 +236,7 @@ class WikiTreeClient:
     def request(self, action: str, **params: Any) -> Any:
         """Perform a raw API request with the given action and parameters."""
 
-        data = {"action": action, **params}
-        if self._app_id and "appId" not in data:
-            data["appId"] = self._app_id
-        return self._post(data)
+        return self._post({"action": action, **params})
 
     # --- Endpoint wrappers (one per documented action) ---
 

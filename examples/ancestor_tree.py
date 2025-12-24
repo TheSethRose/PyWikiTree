@@ -5,7 +5,17 @@ display them in a simple text-based tree structure.
 """
 
 import os
+from pathlib import Path
 from pywikitree.client import WikiTreeClient
+
+def load_env():
+    """Simple .env loader to avoid extra dependencies."""
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
 
 def print_tree(person, ancestors, depth=0):
     """Recursively print the ancestor tree."""
@@ -31,6 +41,7 @@ def print_tree(person, ancestors, depth=0):
             print_tree(mother, ancestors, depth + 1)
 
 def main():
+    load_env()
     # Initialize the client. 
     # It will automatically use WIKITREE_APP_ID from your .env file if present.
     client = WikiTreeClient()
@@ -41,17 +52,25 @@ def main():
     
     try:
         # Fetch 3 generations of ancestors
-        # The API returns a list of person objects
         response = client.get_ancestors(target_profile, depth=3)
         
         if not response or not isinstance(response, list):
-            print("No ancestors found or invalid response.")
+            print(f"No ancestors found or invalid response: {response}")
             return
 
-        # The first person in the list is usually the target
-        root_person = response[0]
+        # The API returns a list with one item containing the 'ancestors' list
+        data = response[0]
+        ancestors = data.get("ancestors", [])
+        
+        if not ancestors:
+            print("No ancestors found in response.")
+            return
+
+        # The first person in the ancestors list is the target
+        root_person = ancestors[0]
+        
         print("\nAncestor Tree:")
-        print_tree(root_person, response)
+        print_tree(root_person, ancestors)
         
     except Exception as e:
         print(f"Error: {e}")

@@ -5,9 +5,20 @@ inspect their biographies for specific keywords.
 """
 
 import os
+from pathlib import Path
 from pywikitree.client import WikiTreeClient
 
+def load_env():
+    """Simple .env loader to avoid extra dependencies."""
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
+
 def main():
+    load_env()
     # Initialize the client
     client = WikiTreeClient()
     
@@ -19,13 +30,25 @@ def main():
     
     try:
         # 1. Search for people
-        search_results = client.search_person(last_name=last_name, limit=10)
+        # Note: WikiTree API uses camelCase for parameters like LastName
+        response = client.search_person(LastName=last_name, limit=10)
         
-        if not search_results or "matches" not in search_results:
+        if not response:
+            print("No response from search.")
+            return
+            
+        # API usually returns a list with one item containing 'matches'
+        if isinstance(response, list) and len(response) > 0:
+            matches = response[0].get("matches", [])
+        elif isinstance(response, dict):
+            matches = response.get("matches", [])
+        else:
+            matches = []
+            
+        if not matches:
             print("No matches found.")
             return
             
-        matches = search_results["matches"]
         print(f"Found {len(matches)} matches. Checking biographies...\n")
         
         for match in matches:
@@ -34,10 +57,16 @@ def main():
             
             # 2. Get the full biography for each match
             # We use bioFormat='raw' to get the WikiText
-            bio_data = client.get_bio(name, bio_format="raw")
+            bio_response = client.get_bio(name, bio_format="raw")
             
-            if bio_data and "bio" in bio_data:
-                bio_text = bio_data["bio"]
+            if bio_response:
+                # Handle list or dict response
+                if isinstance(bio_response, list) and len(bio_response) > 0:
+                    bio_data = bio_response[0]
+                else:
+                    bio_data = bio_response
+                    
+                bio_text = bio_data.get("bio", "")
                 
                 if keyword.lower() in bio_text.lower():
                     print(f"[MATCH] {real_name} ({name})")

@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/pywikitree/__init__.py
+src/pywikitree/client.py
+src/pywikitree/enums.py
+src/pywikitree/exceptions.py
+src/pywikitree/utils.py
+src/pywikitree.egg-info/PKG-INFO
+src/pywikitree.egg-info/SOURCES.txt
+src/pywikitree.egg-info/dependency_links.txt
+src/pywikitree.egg-info/requires.txt
+src/pywikitree.egg-info/top_level.txt
+tests/test_client.py

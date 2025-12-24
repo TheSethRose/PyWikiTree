@@ -390,6 +390,7 @@ class WikiTreeClient:
         *,
         fields: str | Sequence[str] | None = "*",
         bio_format: str | None = None,
+        verbose: bool = True,
     ) -> list[dict[str, Any]]:
         """Fetch every profile on the user's watchlist by handling pagination.
         
@@ -400,7 +401,13 @@ class WikiTreeClient:
         offset = 0
         limit = 100
         
+        if verbose:
+            print("Starting watchlist fetch...")
+
         while True:
+            if verbose:
+                print(f"  Fetching offset {offset} (found {len(all_items)} so far)...")
+
             resp = self.get_watchlist(
                 limit=limit, 
                 offset=offset, 
@@ -420,6 +427,8 @@ class WikiTreeClient:
                 
             offset += limit
             
+        if verbose:
+            print(f"Finished! Total watchlist size: {len(all_items)}")
         return all_items
 
     def crawl_tree(
@@ -430,6 +439,7 @@ class WikiTreeClient:
         ancestor_depth: int = 10,
         descendant_depth: int = 2,
         fields: str | Sequence[str] | None = "*",
+        verbose: bool = True,
     ) -> list[dict[str, Any]]:
         """Recursively crawl the tree to find as many relatives as possible.
         
@@ -442,16 +452,23 @@ class WikiTreeClient:
             ancestor_depth: Depth per API call (max 10).
             descendant_depth: Depth per API call (max 10).
             fields: Fields to fetch.
+            verbose: If True, logs progress to terminal.
         """
         people_dict: dict[str, dict[str, Any]] = {}
         queue = [str(root_key)]
         visited_roots = set()
 
         def add_people(people_list: list[dict[str, Any]]):
+            new_count = 0
             for p in people_list:
                 p_id = str(p.get("Id") or p.get("id") or "")
                 if p_id and p_id not in people_dict:
                     people_dict[p_id] = p
+                    new_count += 1
+            return new_count
+
+        if verbose:
+            print(f"Starting deep crawl from {root_key} (limit: {max_people} people)...")
 
         while queue and len(people_dict) < max_people:
             current_key = queue.pop(0)
@@ -459,30 +476,35 @@ class WikiTreeClient:
                 continue
             visited_roots.add(current_key)
 
+            if verbose:
+                print(f"  Crawling {current_key}... (Queue size: {len(queue)}, Total found: {len(people_dict)})")
+
             # 1. Get ancestors
             anc_resp = self.get_ancestors(current_key, depth=ancestor_depth, fields=fields)
             if anc_resp and isinstance(anc_resp, list) and len(anc_resp) > 0:
                 ancestors = anc_resp[0].get("ancestors", [])
-                add_people(ancestors)
+                added = add_people(ancestors)
+                if verbose and added:
+                    print(f"    + Found {added} ancestors")
+                
                 # Add furthest ancestors to queue for deeper crawling
                 for p in ancestors:
                     # If they have parents but we haven't visited them, they are candidates
                     if (p.get("Father") or p.get("Mother")) and len(people_dict) < max_people:
                         p_id = str(p.get("Id"))
-                        if p_id not in visited_roots:
+                        if p_id not in visited_roots and p_id not in queue:
                             queue.append(p_id)
 
             # 2. Get descendants
             des_resp = self.get_descendants(current_key, depth=descendant_depth, fields=fields)
             if des_resp and isinstance(des_resp, list) and len(des_resp) > 0:
                 descendants = des_resp[0].get("descendants", [])
-                add_people(descendants)
+                added = add_people(descendants)
+                if verbose and added:
+                    print(f"    + Found {added} descendants")
 
-            # 3. Get relatives for everyone found so far (in batches)
-            # This is handled by the fact that we add them to people_dict 
-            # and could potentially add them to the queue if we wanted a full graph crawl.
-            # For now, BFS on ancestors is the most common 'tree' expansion.
-
+        if verbose:
+            print(f"Crawl complete! Found {len(people_dict)} people total.")
         return list(people_dict.values())
 
     def get_bio(

@@ -39,6 +39,7 @@ Check the [examples/](examples/) directory for full scripts:
 - [bio_searcher.py](examples/bio_searcher.py): Searches for people and scans biographies for keywords.
 - [watchlist_explorer.py](examples/watchlist_explorer.py): Demonstrates authentication and watchlist management.
 - [backup_to_gedcom.py](examples/backup_to_gedcom.py): Backs up a family tree to a standard GEDCOM file.
+- [find_potential_connections.py](examples/find_potential_connections.py): Identifies "end-of-line" ancestors and searches for potential "bridge" profiles on WikiTree.
 
 ## Local Backups (GEDCOM)
 
@@ -61,7 +62,7 @@ people = client.crawl_tree("Clemens-1", max_people=1000)
 ```
 
 ### Exporting to GEDCOM
-Once you have your list of people, use the `GedcomExporter`:
+Once you have your list of people, use the `GedcomExporter`. All exports and reports are saved to the `exports/` directory (which is ignored by git for privacy).
 
 ```python
 from pywikitree import GedcomExporter

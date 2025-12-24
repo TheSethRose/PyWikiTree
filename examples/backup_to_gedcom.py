@@ -30,17 +30,22 @@ def main():
     
     if email and password:
         print(f"Authenticating as {email}...")
-        client.authenticate(email=email, password=password)
+        auth = client.authenticate(email=email, password=password)
         print("Authentication successful.\n")
         
-        # Option A: Fetch the entire watchlist (Best for "My Entire Tree")
-        print("Fetching your entire watchlist...")
-        people = client.get_entire_watchlist()
+        # Use Deep Crawl to get a thicker tree starting from the user's profile
+        root_id = auth.user_name if hasattr(auth, 'user_name') else os.getenv("WIKITREE_ROOT_ID")
+        if not root_id:
+            print("Error: No root ID found. Please set WIKITREE_ROOT_ID in .env.")
+            return
+            
+        print(f"Performing deep crawl starting from {root_id}...")
+        people = client.crawl_tree(root_id, max_people=1000)
     else:
         print("No credentials found in .env. Proceeding with public crawl.\n")
         
         # Option B: Deep crawl from a root ID
-        root_id = "Clemens-1"
+        root_id = os.getenv("WIKITREE_ROOT_ID", "Clemens-1")
         print(f"Performing deep crawl starting from {root_id}...")
         people = client.crawl_tree(root_id, max_people=500)
     
@@ -56,7 +61,9 @@ def main():
         gedcom_content = exporter.export()
         
         # 3. Save to file
-        output_file = Path(f"{root_id}_backup.ged")
+        exports_dir = Path(__file__).parent.parent / "exports"
+        exports_dir.mkdir(exist_ok=True)
+        output_file = exports_dir / f"{root_id}_backup.ged"
         output_file.write_text(gedcom_content, encoding="utf-8")
         
         print(f"\nSuccess! Backup saved to: {output_file.absolute()}")

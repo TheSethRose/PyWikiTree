@@ -22,6 +22,7 @@ var/
 # Personal data / Backups
 *.ged
 .env
+exports/
 wheels/
 share/python-wheels/
 *.egg-info/

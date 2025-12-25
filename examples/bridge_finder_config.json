@@ -1,0 +1,137 @@
+{
+  "thresholds": {
+    "min_match_threshold": 50,
+    "base_score_threshold": 20,
+    "confirmed_threshold": 70,
+    "max_crawl_people": 1000,
+    "api_delay": 1.5
+  },
+  "fuzzy_matching": {
+    "exact_threshold": 90,
+    "partial_threshold": 70
+  },
+  "weights": {
+    "first_name_exact": 15,
+    "first_name_partial": 8,
+    "first_name_mismatch": -20,
+    
+    "middle_name_exact": 10,
+    "middle_name_partial": 5,
+    "middle_name_mismatch": -8,
+    
+    "last_name_exact": 15,
+    "last_name_mismatch": -50,
+    
+    "suffix_exact": 8,
+    "suffix_mismatch": -15,
+    
+    "birth_day_exact": 10,
+    "birth_day_close": 5,
+    "birth_day_mismatch": -8,
+    
+    "birth_month_exact": 10,
+    "birth_month_close": 5,
+    "birth_month_mismatch": -8,
+    
+    "birth_year_exact": 15,
+    "birth_year_close": 10,
+    "birth_year_near": 5,
+    "birth_year_mismatch_per_year": -3,
+    
+    "death_day_exact": 8,
+    "death_day_close": 4,
+    "death_day_mismatch": -6,
+    
+    "death_month_exact": 8,
+    "death_month_close": 4,
+    "death_month_mismatch": -6,
+    
+    "death_year_exact": 12,
+    "death_year_close": 8,
+    "death_year_near": 4,
+    "death_year_mismatch_per_year": -2,
+    
+    "birth_city_exact": 15,
+    "birth_city_mismatch": -12,
+    
+    "birth_county_exact": 12,
+    "birth_county_mismatch": -10,
+    
+    "birth_state_exact": 10,
+    "birth_state_mismatch": -8,
+    
+    "birth_country_exact": 8,
+    "birth_country_mismatch": -30,
+    
+    "birth_region_exact": 5,
+    "birth_region_mismatch": -40,
+    
+    "death_city_exact": 12,
+    "death_city_mismatch": -10,
+    
+    "death_county_exact": 10,
+    "death_county_mismatch": -8,
+    
+    "death_state_exact": 8,
+    "death_state_mismatch": -6,
+    
+    "death_country_exact": 6,
+    "death_country_mismatch": -20,
+    
+    "death_region_exact": 4,
+    "death_region_mismatch": -30,
+    
+    "has_parents": 10,
+    "parent_match": 25,
+    "parent_mismatch": -20,
+    
+    "spouse_match": 20,
+    "spouse_mismatch": -15,
+    
+    "child_match": 15,
+    "child_mismatch": -10,
+    
+    "sibling_match": 12,
+    "sibling_mismatch": -8,
+    
+    "no_relatives_data": -5,
+    "no_matching_relatives": -10
+  },
+  "locations": {
+    "us_states": [
+      "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+      "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+      "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana",
+      "maine", "maryland", "massachusetts", "michigan", "minnesota",
+      "mississippi", "missouri", "montana", "nebraska", "nevada",
+      "new hampshire", "new jersey", "new mexico", "new york", "north carolina",
+      "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
+      "rhode island", "south carolina", "south dakota", "tennessee", "texas",
+      "utah", "vermont", "virginia", "washington", "west virginia",
+      "wisconsin", "wyoming"
+    ],
+    "uk_counties": [
+      "yorkshire", "lancashire", "essex", "kent", "surrey", "sussex",
+      "hampshire", "devon", "cornwall", "somerset", "dorset", "wiltshire",
+      "berkshire", "oxfordshire", "buckinghamshire", "hertfordshire",
+      "cambridgeshire", "norfolk", "suffolk", "leicestershire", "nottinghamshire",
+      "derbyshire", "staffordshire", "warwickshire", "worcestershire",
+      "gloucestershire", "lincolnshire", "northamptonshire", "bedfordshire"
+    ],
+    "countries": {
+      "usa": ["united states", "america", "usa", "u.s.a.", "u.s."],
+      "uk": ["england", "britain", "uk", "united kingdom", "great britain"],
+      "ireland": ["ireland", "eire"],
+      "scotland": ["scotland"],
+      "wales": ["wales"],
+      "france": ["france"],
+      "germany": ["germany", "prussia", "bavaria"],
+      "canada": ["canada"]
+    },
+    "regions": {
+      "north_america": ["usa", "canada"],
+      "british_isles": ["uk", "ireland", "scotland", "wales"],
+      "europe": ["france", "germany"]
+    }
+  }
+}
